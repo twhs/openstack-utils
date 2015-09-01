@@ -3,17 +3,25 @@
 
 import os
 import sys
+import argparse
 
 from keystoneclient.auth.identity import v2
 from keystoneclient import session
 from keystoneclient.v2_0 import client
 
-DRY_RUN=True
+parser = argparse.ArgumentParser(description='Create Endpoints')
+parser.add_argument('--public', dest='public', action='store', required=True)
+parser.add_argument('--internal', dest='internal', action='store', required=True)
+parser.add_argument('--admin', dest='admin', action='store', required=True)
+parser.add_argument('--dryrun', action='store_true', default=False)
+parser.add_argument('--protocol', dest='protocol', action='store', default='http')
+args = parser.parse_args()
 
-protocol = 'http'
-public = '192.168.11.100'  
-internal = '10.0.0.1'
-admin = '10.0.0.1'
+dry_run=args.dryrun
+protocol = args.protocol
+public = args.public  
+internal = args.internal
+admin = args.admin
 
 user = os.getenv('OS_USERNAME')
 password = os.getenv('OS_PASSWORD')
@@ -22,7 +30,7 @@ region = os.getenv('OS_REGION_NAME')
 auth_url = os.getenv('OS_AUTH_URL')
 
 if user is None or password is None or tenant is None or region is None or auth_url is None:
-    print("ERROR!")
+    print("Load rc file!")
     sys.exit(1)
 
 #              publicURL, internalURL, adminURL の順
@@ -58,7 +66,7 @@ for service in services:
     publicURL = url_template % (public, endpoint[0][0], endpoint[0][1])
     internalURL = url_template % (internal, endpoint[1][0], endpoint[1][1])
     adminURL = url_template % (admin, endpoint[2][0], endpoint[2][1])
-    if not DRY_RUN:
+    if not dry_run:
         cli.endpoints.create(
             region=region,
             service_id=service.id,
@@ -70,5 +78,5 @@ for service in services:
 
 # 変更前の endpoint を削除
 for endpoint in old_endpoints:
-    if not DRY_RUN:
+    if not dry_run:
         cli.endpoints.delete(endpoint.id)
